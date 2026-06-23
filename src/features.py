@@ -9,7 +9,8 @@ FEATURES_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "features"
 
 BASE_COLUMNS = ("Date", "Open", "High", "Low", "Close", "Volume")
 INDICATOR_COLUMNS = ("SMA20", "SMA50", "EMA20", "RSI", "MACD", "VolumeChange")
-OUTPUT_COLUMNS = BASE_COLUMNS + INDICATOR_COLUMNS
+FEATURE_COLUMNS = INDICATOR_COLUMNS
+OUTPUT_COLUMNS = BASE_COLUMNS + INDICATOR_COLUMNS + ("TargetReturn",)
 
 
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -27,6 +28,12 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df.dropna().reset_index(drop=True)
 
 
+def add_target_return(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["TargetReturn"] = (df["Close"].shift(-1) - df["Close"]) / df["Close"]
+    return df.dropna(subset=["TargetReturn"]).reset_index(drop=True)
+
+
 def build_feature_dataset(
     ticker: str,
     processed_dir: Path = PROCESSED_DATA_DIR,
@@ -38,6 +45,7 @@ def build_feature_dataset(
 
     df = pd.read_csv(processed_path, parse_dates=["Date"])
     df = add_technical_indicators(df)
+    df = add_target_return(df)
     df = df[list(OUTPUT_COLUMNS)]
 
     output_dir.mkdir(parents=True, exist_ok=True)
