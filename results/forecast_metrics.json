@@ -1,0 +1,10 @@
+{
+  "ticker": "SPY",
+  "split": "test",
+  "test_samples": 618,
+  "rmse": 0.01105089858174324,
+  "mae": 0.007981986738741398,
+  "direction_accuracy": 0.43042071197411,
+  "target_direction_accuracy": 0.55,
+  "meets_direction_target": false
+}

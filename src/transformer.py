@@ -120,6 +120,35 @@ def count_parameters(model: nn.Module) -> int:
     return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
 
 
+def evaluate_forecast(
+    model: nn.Module,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    device: torch.device | None = None,
+) -> dict[str, np.ndarray | float]:
+    device = device or torch.device("cpu")
+    model.eval()
+
+    with torch.no_grad():
+        preds = (
+            model(torch.from_numpy(X_test).to(device))
+            .cpu()
+            .numpy()
+            .squeeze()
+        )
+
+    y_true = np.asarray(y_test, dtype=np.float32)
+    errors = preds - y_true
+
+    return {
+        "rmse": float(np.sqrt(np.mean(errors**2))),
+        "mae": float(np.mean(np.abs(errors))),
+        "direction_accuracy": float(np.mean(np.sign(preds) == np.sign(y_true))),
+        "predictions": preds,
+        "actuals": y_true,
+    }
+
+
 if __name__ == "__main__":
     from src.features import FEATURE_COLUMNS, build_feature_dataset
 
