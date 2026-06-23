@@ -1,0 +1,29 @@
+{
+  "ticker": "SPY",
+  "split": "test",
+  "test_samples": 618,
+  "accuracy": 0.7928802588996764,
+  "precision_macro": 0.26429341963322545,
+  "recall_macro": 0.3333333333333333,
+  "f1_macro": 0.29482551143200963,
+  "per_class": {
+    "Sell": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 63
+    },
+    "Hold": {
+      "precision": 0.7928802588996764,
+      "recall": 1.0,
+      "f1": 0.8844765342960289,
+      "support": 490
+    },
+    "Buy": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 65
+    }
+  }
+}
