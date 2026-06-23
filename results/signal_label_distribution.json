@@ -1,0 +1,14 @@
+{
+  "split": "train",
+  "counts": {
+    "Sell": 223,
+    "Hold": 1416,
+    "Buy": 267
+  },
+  "percentages": {
+    "Sell": 11.7,
+    "Hold": 74.29,
+    "Buy": 14.01
+  },
+  "total": 1906
+}
