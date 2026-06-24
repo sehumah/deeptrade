@@ -1,0 +1,30 @@
+{
+  "ppo_agent": {
+    "total_return": 0.4634207885393509,
+    "annual_return": 0.1685600762096804,
+    "sharpe_ratio": 1.1199367003915235,
+    "max_drawdown": -0.14577379377400318,
+    "win_rate": 0.4935064935064935
+  },
+  "buy_and_hold": {
+    "total_return": 0.592909355197613,
+    "annual_return": 0.20980263401560628,
+    "sharpe_ratio": 1.2721394280998954,
+    "max_drawdown": -0.18998904129504904,
+    "win_rate": 0.5746753246753247
+  },
+  "moving_average": {
+    "total_return": 0.328263980930707,
+    "annual_return": 0.12314163160657254,
+    "sharpe_ratio": 1.1286632493193385,
+    "max_drawdown": -0.09987626111349354,
+    "win_rate": 0.43993506493506496
+  },
+  "random": {
+    "total_return": 0.059265846268051536,
+    "annual_return": 0.023833429563448805,
+    "sharpe_ratio": 0.3064553758465102,
+    "max_drawdown": -0.08808186107285572,
+    "win_rate": 0.2435064935064935
+  }
+}
