@@ -115,6 +115,30 @@ class ReturnTransformer(nn.Module):
         x = x.mean(dim=1)
         return self.head(x)
 
+    def extract_attention_weights(self, x: torch.Tensor) -> list[torch.Tensor]:
+        """Return per-layer self-attention weights with shape (batch, nhead, seq, seq)."""
+        self.eval()
+        hidden = self.pos_encoder(self.input_projection(x))
+        layer_weights: list[torch.Tensor] = []
+
+        for layer in self.transformer_encoder.layers:
+            if layer.norm_first:
+                attn_input = layer.norm1(hidden)
+            else:
+                attn_input = hidden
+
+            _, weights = layer.self_attn(
+                attn_input,
+                attn_input,
+                attn_input,
+                need_weights=True,
+                average_attn_weights=False,
+            )
+            layer_weights.append(weights)
+            hidden = layer(hidden)
+
+        return layer_weights
+
 
 def count_parameters(model: nn.Module) -> int:
     return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)

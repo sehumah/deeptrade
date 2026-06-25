@@ -1,0 +1,15 @@
+Transformer Attention Summary
+=============================
+Samples analyzed: 32 test windows
+
+Top attended day lags (relative to prediction day t):
+  1. t-54 (window index 5) — mean attention 0.0205
+  2. t-30 (window index 29) — mean attention 0.0204
+  3. t-31 (window index 28) — mean attention 0.0199
+  4. t-55 (window index 4) — mean attention 0.0198
+  5. t-29 (window index 30) — mean attention 0.0192
+
+Interpretation:
+- Recent days (last 5 in window) account for 7.6% of total attention mass.
+- Days around t-20 account for 6.6% of total attention mass.
+- Attention is distributed across the window with multiple focal lags.
