@@ -198,14 +198,10 @@ def _build_classifier_splits(
     feature_path = features_dir / f"{ticker}_features.csv"
     df = pd.read_csv(feature_path, parse_dates=["Date"])
     X, y, dates = build_classifier_dataset(
-        df,
-        transformer,
-        FEATURE_COLUMNS,
-        transformer_ckpt["scaler"],
-        device,
-        buy_thresh=classifier_ckpt.get("buy_thresh", 0.01),
-        sell_thresh=classifier_ckpt.get("sell_thresh", -0.01),
-    )
+    df,
+    buy_thresh=classifier_ckpt.get("buy_thresh", 0.01),
+    sell_thresh=classifier_ckpt.get("sell_thresh", -0.01),
+)
 
     dates = pd.to_datetime(dates)
     train_mask = dates <= TRAIN_END

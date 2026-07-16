@@ -1,10 +1,10 @@
 {
   "ppo_agent": {
-    "total_return": 0.4634207885393509,
-    "annual_return": 0.1685600762096804,
-    "sharpe_ratio": 1.1199367003915235,
-    "max_drawdown": -0.14577379377400318,
-    "win_rate": 0.4935064935064935
+    "total_return": 0.021196479927187466,
+    "annual_return": 0.008617584631898767,
+    "sharpe_ratio": 0.13277344999670437,
+    "max_drawdown": -0.1379357797630383,
+    "win_rate": 0.05032467532467533
   },
   "buy_and_hold": {
     "total_return": 0.592909355197613,

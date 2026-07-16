@@ -1,0 +1,6 @@
+{
+  "ticker": "SPY",
+  "model_id": "amazon/chronos-t5-tiny",
+  "window_size": 60,
+  "samples": 2774
+}

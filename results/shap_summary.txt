@@ -2,16 +2,16 @@ SHAP Feature Importance Summary
 ===============================
 
 Top features driving Buy decisions (class=Buy):
-  1. RSI — mean |SHAP| 0.0139
+  1. RSI — mean |SHAP| 0.0140
   2. SMA50 — mean |SHAP| 0.0134
   3. SMA20 — mean |SHAP| 0.0094
 
 Top features driving Sell decisions (class=Sell):
-  1. RSI — mean |SHAP| 0.0152
-  2. SMA20 — mean |SHAP| 0.0099
-  3. SMA50 — mean |SHAP| 0.0099
+  1. RSI — mean |SHAP| 0.0153
+  2. SMA50 — mean |SHAP| 0.0100
+  3. SMA20 — mean |SHAP| 0.0098
 
 Interpretation:
 - Buy signals are most influenced by RSI and SMA50.
-- Sell signals are most influenced by RSI and SMA20.
+- Sell signals are most influenced by RSI and SMA50.
 - Transformer forecast and momentum indicators (RSI, MACD) typically dominate trading decisions.

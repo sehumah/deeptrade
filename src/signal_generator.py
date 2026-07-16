@@ -17,12 +17,8 @@ from sklearn.metrics import (
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from src.chronos_forecast import PREDICTIONS_PATH, ensure_predictions
 from src.features import FEATURE_COLUMNS, FEATURES_DATA_DIR
-from src.train_transformer import (
-    CHECKPOINT_PATH,
-    load_model_from_checkpoint,
-    transform_sequences,
-)
 from src.transformer import create_sequences, train_val_test_split
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
@@ -127,24 +123,6 @@ class SignalClassifier(nn.Module):
         return self.network(x)
 
 
-def _predict_transformer_returns(
-    model: nn.Module,
-    X: np.ndarray,
-    device: torch.device,
-    batch_size: int = 256,
-) -> np.ndarray:
-    model.eval()
-    predictions: list[np.ndarray] = []
-
-    with torch.no_grad():
-        for start in range(0, len(X), batch_size):
-            batch = torch.from_numpy(X[start : start + batch_size]).to(device)
-            preds = model(batch).cpu().numpy().squeeze(-1)
-            predictions.append(preds)
-
-    return np.concatenate(predictions).astype(np.float32)
-
-
 def _extract_indicator_features(df: pd.DataFrame, dates: np.ndarray) -> np.ndarray:
     date_index = pd.to_datetime(df["Date"])
     lookup = df.set_index(date_index)[list(CLASSIFIER_INDICATOR_COLUMNS)]
@@ -154,19 +132,14 @@ def _extract_indicator_features(df: pd.DataFrame, dates: np.ndarray) -> np.ndarr
 
 def build_classifier_dataset(
     df: pd.DataFrame,
-    transformer: nn.Module,
-    feature_columns: list[str] | tuple[str, ...],
-    scaler,
-    device: torch.device,
     buy_thresh: float = DEFAULT_BUY_THRESH,
     sell_thresh: float = DEFAULT_SELL_THRESH,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    X_seq, y_returns, dates = create_sequences(df, feature_columns)
-    X_scaled = transform_sequences(X_seq, scaler)
-    transformer_preds = _predict_transformer_returns(transformer, X_scaled, device)
+    _, y_returns, dates = create_sequences(df, FEATURE_COLUMNS)
+    forecast_preds, _ = ensure_predictions(df)
     indicators = _extract_indicator_features(df, dates)
 
-    X = np.column_stack([transformer_preds, indicators]).astype(np.float32)
+    X = np.column_stack([forecast_preds, indicators]).astype(np.float32)
     y = generate_labels(y_returns, buy_thresh=buy_thresh, sell_thresh=sell_thresh)
     return X, y, dates
 
@@ -221,25 +194,23 @@ def train_classifier(
     buy_thresh: float = DEFAULT_BUY_THRESH,
     sell_thresh: float = DEFAULT_SELL_THRESH,
     features_dir: Path = FEATURES_DATA_DIR,
-    checkpoint_path: Path = CHECKPOINT_PATH,
+    predictions_path: Path = PREDICTIONS_PATH,
     classifier_path: Path = CLASSIFIER_PATH,
 ) -> dict:
-    if not checkpoint_path.exists():
-        raise FileNotFoundError(f"Transformer checkpoint not found: {checkpoint_path}")
+    if not predictions_path.exists():
+        raise FileNotFoundError(
+            f"Chronos predictions not found: {predictions_path}. "
+            "Run `python -m src.chronos_forecast` first."
+        )
 
-    transformer, checkpoint, device = load_model_from_checkpoint(checkpoint_path)
-    scaler = checkpoint["scaler"]
-    ticker = ticker or checkpoint.get("ticker", "SPY")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ticker = ticker or "SPY"
 
     feature_path = features_dir / f"{ticker}_features.csv"
     df = pd.read_csv(feature_path, parse_dates=["Date"])
 
     X, y, dates = build_classifier_dataset(
         df,
-        transformer,
-        FEATURE_COLUMNS,
-        scaler,
-        device,
         buy_thresh=buy_thresh,
         sell_thresh=sell_thresh,
     )
@@ -297,6 +268,7 @@ def train_classifier(
             "model_state_dict": best_state,
             "input_dim": input_dim,
             "indicator_columns": list(CLASSIFIER_INDICATOR_COLUMNS),
+            "forecast_backend": "chronos",
             "buy_thresh": buy_thresh,
             "sell_thresh": sell_thresh,
             "best_val_loss": best_val_loss,
@@ -412,16 +384,20 @@ def plot_confusion_matrix(
 def run_classifier_evaluation(
     ticker: str | None = None,
     features_dir: Path = FEATURES_DATA_DIR,
-    transformer_path: Path = CHECKPOINT_PATH,
+    predictions_path: Path = PREDICTIONS_PATH,
     classifier_path: Path = CLASSIFIER_PATH,
     metrics_path: Path = METRICS_PATH,
     confusion_matrix_path: Path = CONFUSION_MATRIX_PATH,
 ) -> dict:
     if not classifier_path.exists():
         raise FileNotFoundError(f"Classifier checkpoint not found: {classifier_path}")
+    if not predictions_path.exists():
+        raise FileNotFoundError(
+            f"Chronos predictions not found: {predictions_path}. "
+            "Run `python -m src.chronos_forecast` first."
+        )
 
-    transformer, transformer_ckpt, device = load_model_from_checkpoint(transformer_path)
-    classifier, classifier_ckpt, device = load_classifier_from_checkpoint(classifier_path, device)
+    classifier, classifier_ckpt, device = load_classifier_from_checkpoint(classifier_path, device=None)
 
     ticker = ticker or classifier_ckpt.get("ticker", "SPY")
     buy_thresh = classifier_ckpt.get("buy_thresh", DEFAULT_BUY_THRESH)
@@ -432,10 +408,6 @@ def run_classifier_evaluation(
 
     X, y, dates = build_classifier_dataset(
         df,
-        transformer,
-        FEATURE_COLUMNS,
-        transformer_ckpt["scaler"],
-        device,
         buy_thresh=buy_thresh,
         sell_thresh=sell_thresh,
     )

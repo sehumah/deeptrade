@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import gymnasium as gym
 import numpy as np
 import pandas as pd
-import torch
 from gymnasium import spaces
 
+from src.chronos_forecast import ensure_predictions
 from src.features import FEATURE_COLUMNS
-from src.train_transformer import CHECKPOINT_PATH, load_model_from_checkpoint, transform_sequences
 from src.transformer import WINDOW_SIZE, create_sequences
 
 # Observation vector: [transformer_pred, RSI, MACD, cash_norm, shares_norm]
@@ -21,52 +18,24 @@ DEFAULT_INITIAL_CASH = 100_000.0
 DEFAULT_TRANSACTION_COST_RATE = 0.001
 
 
-def _predict_transformer_returns(
-    model: torch.nn.Module,
-    X: np.ndarray,
-    device: torch.device,
-    batch_size: int = 256,
-) -> np.ndarray:
-    model.eval()
-    predictions: list[np.ndarray] = []
-
-    with torch.no_grad():
-        for start in range(0, len(X), batch_size):
-            batch = torch.from_numpy(X[start : start + batch_size]).to(device)
-            preds = model(batch).cpu().numpy().squeeze(-1)
-            predictions.append(preds)
-
-    return np.concatenate(predictions).astype(np.float32)
-
-
 def build_env_arrays(
     df: pd.DataFrame,
     feature_columns: list[str] | tuple[str, ...] = FEATURE_COLUMNS,
-    transformer_path: Path | None = CHECKPOINT_PATH,
     transformer_predictions: np.ndarray | None = None,
     start_date: str | pd.Timestamp | None = None,
     end_date: str | pd.Timestamp | None = None,
 ) -> dict[str, np.ndarray]:
-    """Build aligned price, indicator, and transformer arrays for the RL environment."""
+    """Build aligned price, indicator, and forecast arrays for the RL environment."""
     required_columns = {"Date", "Close", "RSI", "MACD"}
     missing = required_columns - set(df.columns)
     if missing:
         raise ValueError(f"DataFrame missing required columns: {sorted(missing)}")
 
-    if transformer_predictions is None:
-        if transformer_path is None or not Path(transformer_path).exists():
-            raise FileNotFoundError(
-                "Transformer checkpoint not found. Train the model first or pass "
-                "transformer_predictions explicitly."
-            )
+    _, _, dates = create_sequences(df, feature_columns)
 
-        transformer, checkpoint, device = load_model_from_checkpoint(transformer_path)
-        scaler = checkpoint["scaler"]
-        X_seq, _, dates = create_sequences(df, feature_columns)
-        X_scaled = transform_sequences(X_seq, scaler)
-        transformer_predictions = _predict_transformer_returns(transformer, X_scaled, device)
+    if transformer_predictions is None:
+        transformer_predictions, _ = ensure_predictions(df)
     else:
-        X_seq, _, dates = create_sequences(df, feature_columns)
         transformer_predictions = np.asarray(transformer_predictions, dtype=np.float32)
         if len(transformer_predictions) != len(dates):
             raise ValueError(
@@ -117,7 +86,7 @@ class TradingEnv(gym.Env):
     """Gymnasium environment for daily equity trading on historical feature data.
 
     Observation (shape ``(5,)``):
-        0. Transformer predicted return
+        0. Chronos predicted return
         1. RSI
         2. MACD
         3. Normalized cash (cash / initial_cash)
@@ -291,7 +260,6 @@ def make_trading_env(
     *,
     initial_cash: float = DEFAULT_INITIAL_CASH,
     transaction_cost_rate: float = DEFAULT_TRANSACTION_COST_RATE,
-    transformer_path: Path | None = CHECKPOINT_PATH,
     transformer_predictions: np.ndarray | None = None,
     start_date: str | pd.Timestamp | None = None,
     end_date: str | pd.Timestamp | None = None,
@@ -302,7 +270,6 @@ def make_trading_env(
     arrays = build_env_arrays(
         df,
         feature_columns=feature_columns,
-        transformer_path=transformer_path,
         transformer_predictions=transformer_predictions,
         start_date=start_date,
         end_date=end_date,
